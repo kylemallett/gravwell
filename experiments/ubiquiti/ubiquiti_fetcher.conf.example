@@ -1,0 +1,237 @@
+[Global]
+# Unique identifier for this ingester instance
+Ingester-UUID="00000000-0000-0000-0000-000000000000"
+REPLACE_WITH_API_TOKEN="REPLACE_WITH_INGEST_SECRET"
+
+# Connection timeout in seconds (0 for no timeout)
+Connection-Timeout=0
+Insecure-Skip-TLS-Verify=true
+
+# Backend connection options (uncomment and configure as needed)
+#Cleartext-Backend-Target=127.0.0.1:4023
+#Encrypted-Backend-Target=127.1.1.1:4024
+#Pipe-Backend-Target=/opt/gravwell/comms/pipe
+
+# Cache configuration
+State-Store-Location="/opt/gravwell/etc/ubiquiti_fetcher.state"
+Ingest-Cache-Path="/opt/gravwell/cache/ubiquiti.cache"
+Log-Level=INFO
+Log-File="/opt/gravwell/log/ubiquiti_fetcher.log"
+
+# Preprocessors 
+[Preprocessor "unifi_sm_devices_split"]
+    Type=jsonarraysplit
+    # Force-JSON-Object=true
+    Additional-Fields="hostId,hostName,devices,updatedAt"
+    Extraction="hostId"
+
+[Preprocessor "unifi_sm_devices_extract"]
+    Type=jsonarraysplit
+    # Force-JSON-Object=true
+    Extraction="devices"
+
+# [Preprocessor "unifi_sm_devices_ts"]
+#     Type=jsontimeextract
+#     Path=updatedAt
+#     Timestamp-Override="RFC3339"
+
+# ----------------------------
+# Site Manager (Cloud) API
+# ----------------------------
+# SM = Site Manager 
+
+[UbiquitiConf "unifi-sm-hosts"]
+    Domain="api.ui.com"
+    Token="REPLACE_WITH_API_TOKEN"
+    API="/v1/hosts"
+    Mode="single"
+    RateLimit=100
+    Tag-Name="unifi-sm-hosts"
+
+[UbiquitiConf "unifi-sm-sites"]
+    Domain="api.ui.com"
+    Token="REPLACE_WITH_API_TOKEN"
+    API="/v1/sites"
+    Mode="single"
+    RateLimit=100
+    Tag-Name="unifi-sm-sites"
+
+[UbiquitiConf "unifi-mm-devices"]
+    Domain="api.ui.com"
+    Token="REPLACE_WITH_API_TOKEN"
+    API="/v1/devices"
+    Mode="single"
+    RateLimit=100
+    Tag-Name="unifi-mm-devices"
+    Preprocessor="unifi_sm_devices_split"
+    Preprocessor="unifi_sm_devices_extract"
+    # Preprocessor="unifi_sm_devices_ts"
+
+# -----------------------------------
+# Local Network API (UniFi OS typical prefix shown)
+# Replace <siteId> with the ID returned by /v1/sites
+# -----------------------------------
+
+[UbiquitiConf "unifi-network-info"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    Mode="router"
+    Endpoints="/proxy/network/integration/v1/info"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-info"
+
+[UbiquitiConf "unifi-network-countries"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    Mode="router"
+    Endpoints="/proxy/network/integration/v1/countries"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-info"
+
+[UbiquitiConf "unifi-network-sites"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-sites"
+
+[UbiquitiConf "unifi-network-devices"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/devices?limit=200"
+    Mode="expand"
+    Endpoints="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/devices/{deviceId}"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-devices"
+
+[UbiquitiConf "unifi-network-devices-statistics"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/devices?limit=200"
+    Mode="expand"
+    Endpoints="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/devices/{deviceId}/statistics/latest"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-devices"
+
+[UbiquitiConf "unifi-network-clients"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/clients?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-clients"
+
+[UbiquitiConf "unifi-network"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/networks?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network"
+
+[UbiquitiConf "unifi-network-wifi"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/wifi/broadcasts?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-wifi"
+
+[UbiquitiConf "unifi-network-hotspot"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/hotspot/vouchers?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-hotspot"
+
+[UbiquitiConf "unifi-network-firewall-zones"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/firewall/zones?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-firewall-zones"
+
+[UbiquitiConf "unifi-network-acl-rules"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/acl-rules?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-acl-rules"
+
+[UbiquitiConf "unifi-network-traffic"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/traffic-matching-lists?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-traffic"
+
+[UbiquitiConf "unifi-network-wans"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/wans?limit=200"
+    Mode="single"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-wans"
+
+[UbiquitiConf "unifi-network-vpn-site-to-site"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    Mode="router"
+    Endpoints="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/vpn/site-to-site-tunnels?limit=200"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-vpn"
+
+[UbiquitiConf "unifi-network-vpn"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN" 
+    Mode="router"
+    Endpoints="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/vpn/servers?limit=200"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-vpn"
+
+[UbiquitiConf "unifi-network-radius-profiles"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    API="/proxy/network/integration/v1/sites/<REPLACE_WITH_SITE_ID>/radius/profiles?limit=200"
+    Mode="single" 
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-radius-profiles"
+
+[UbiquitiConf "unifi-network-dpi"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    Mode="router"
+    Endpoints="/proxy/network/integration/v1/dpi/categories"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-dpi"
+
+[UbiquitiConf "unifi-network-dpi-applications"]
+    Domain="REPLACE_WITH_INTERNAL_GATEWAY_IP" # e.g. Class A: 10.0.0.1, Class B: 172.16.0.1, Class C: 192.168.0.1
+    Token="REPLACE_WITH_LOCAL_API_TOKEN"
+    Mode="router"
+    Endpoints="/proxy/network/integration/v1/dpi/applications"
+    Insecure=true
+    RateLimit=60
+    Tag-Name="unifi-network-dpi"
